@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced ICE — AI Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f5f0;--surface:#fff;--surface2:#f2ede6;--surface3:#ebe5dc;
+  --border:#e0d9d0;--border2:#cdc5ba;
+  --accent:#c8dc00;--accent-dark:#afc200;--accent-text:#4a5500;--accent-ring:rgba(200,220,0,0.18);
+  --text:#1c1917;--text2:#6b6460;--text3:#a8a29c;
+  --green:#2a9e6b;
+  --mono:'Geist Mono',monospace;--sans:'Geist',sans-serif;
+  --sh1:0 1px 3px rgba(0,0,0,0.06);--sh2:0 4px 16px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);
+}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex;flex-direction:column;}
+
+/* topbar */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:56px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;box-shadow:var(--sh1);
+}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-mark{
+  width:28px;height:28px;background:var(--accent);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(200,220,0,0.28);
+}
+.brand-mark svg{width:13px;height:13px;fill:var(--text);}
+.brand-name{font-family:var(--mono);font-size:11.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--text2);}
+.brand-name strong{color:var(--text);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.api-field{
+  font-family:var(--mono);font-size:11px;padding:7px 12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  color:var(--text2);outline:none;width:216px;transition:border-color .15s,box-shadow .2s;
+}
+.api-field:focus{border-color:var(--border2);color:var(--text);box-shadow:0 0 0 3px var(--accent-ring);}
+.api-field::placeholder{color:var(--text3);}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .4s,box-shadow .4s;flex-shrink:0;}
+.status-dot.active{background:var(--green);box-shadow:0 0 0 3px rgba(42,158,107,0.18);}
+
+/* chat */
+.chat-scroll{flex:1;overflow-y:auto;scroll-behavior:smooth;}
+.chat-scroll::-webkit-scrollbar{width:4px;}
+.chat-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.chat-feed{max-width:720px;margin:0 auto;padding:28px 24px 20px;display:flex;flex-direction:column;}
+
+/* messages */
+.msg{display:flex;gap:13px;margin-bottom:20px;animation:in .28s cubic-bezier(.16,1,.3,1);}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.msg-icon{
+  width:28px;height:28px;flex-shrink:0;margin-top:2px;
+  display:flex;align-items:center;justify-content:center;border-radius:7px;
+}
+.msg-icon.ai{background:var(--accent);box-shadow:0 2px 6px rgba(200,220,0,0.25);}
+.msg-icon.ai svg{width:12px;height:12px;fill:var(--text);}
+.msg-icon.user{background:var(--surface3);border:1px solid var(--border2);}
+.msg-icon.user svg{width:12px;height:12px;fill:var(--text2);}
+.msg-body{flex:1;min-width:0;}
+.msg-sender{font-family:var(--mono);font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
+.msg-text{font-size:14.5px;line-height:1.75;color:var(--text);}
+.msg-text p{margin-bottom:8px;}.msg-text p:last-child{margin-bottom:0;}
+.msg-text strong{color:var(--accent-text);font-weight:500;}
+.msg-text h3{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;color:var(--text2);margin:16px 0 7px;padding-top:16px;border-top:1px solid var(--border);}
+.msg-text h3:first-child{margin-top:0;padding-top:0;border-top:none;}
+.msg-text ul,.msg-text ol{padding-left:18px;margin:5px 0;}.msg-text li{margin-bottom:3px;}
+.msg-text table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0;}
+.msg-text th{text-align:left;padding:8px 12px;background:var(--surface2);font-family:var(--mono);font-size:9.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);}
+.msg-text td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+.msg-text tr:last-child td{border-bottom:none;}
+.msg-text code{font-family:var(--mono);font-size:12px;background:var(--surface2);border:1px solid var(--border);padding:1px 5px;border-radius:4px;color:var(--accent-text);}
+.msg-text a{color:var(--accent-text);}
+/* user bubble right */
+.msg.user{flex-direction:row-reverse;}
+.msg.user .msg-body{display:flex;flex-direction:column;align-items:flex-end;}
+.msg.user .msg-sender{text-align:right;}
+.msg.user .msg-text{background:var(--surface);border:1px solid var(--border);border-radius:16px 4px 16px 16px;padding:10px 15px;width:fit-content;max-width:84%;box-shadow:var(--sh1);color:var(--text2);}
+
+/* typing */
+.typing-row{display:flex;gap:13px;margin-bottom:20px;animation:in .28s ease;}
+.typing-dots{display:flex;gap:5px;align-items:center;padding:5px 0;}
+.typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--text3);animation:dot 1.4s infinite;}
+.typing-dots span:nth-child(2){animation-delay:.22s;}
+.typing-dots span:nth-child(3){animation-delay:.44s;}
+@keyframes dot{0%,60%,100%{transform:scale(.85);background:var(--border2);}30%{transform:scale(1.25);background:var(--text3);}}
+.typing-label{font-family:var(--mono);font-size:10px;color:var(--text3);margin-left:6px;animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+
+/* follow-up popover */
+.followup-bar{
+  flex-shrink:0;padding:8px 24px 0;
+  animation:slideUp .28s cubic-bezier(.16,1,.3,1);
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.followup-inner{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;box-shadow:var(--sh2);
+  overflow:hidden;padding-right:28px;
+}
+.popover-section{
+  display:flex;align-items:flex-start;gap:10px;padding:10px 14px;flex-wrap:wrap;
+}
+.popover-section+.popover-section{border-top:1px solid var(--border);}
+.popover-section-label{
+  font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text3);white-space:nowrap;flex-shrink:0;padding-top:6px;min-width:52px;
+}
+.popover-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+/* askmore chips — slightly warmer, feels like a question */
+.fchip{
+  padding:5px 13px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;font-size:12.5px;color:var(--text2);cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.fchip:hover{background:var(--surface3);border-color:var(--border2);color:var(--text);}
+.fchip.ask{
+  background:rgba(200,220,0,0.08);border-color:rgba(200,220,0,0.35);color:var(--accent-text);
+}
+.fchip.ask:hover{background:rgba(200,220,0,0.15);border-color:rgba(200,220,0,0.5);}
+.popover-close{
+  position:absolute;top:10px;right:12px;
+  background:none;border:none;cursor:pointer;color:var(--text3);
+  font-size:15px;line-height:1;padding:2px 5px;transition:color .15s;
+}
+.popover-close:hover{color:var(--text2);}
+.followup-inner-wrap{position:relative;max-width:720px;margin:0 auto;}
+
+/* ASKMORE PANEL — Claude-style question checklist above input */
+.askmore-bar{
+  flex-shrink:0;padding:8px 24px 0;
+  animation:slideUp .28s cubic-bezier(.16,1,.3,1);
+}
+.askmore-inner{
+  background:var(--surface);border:1px solid rgba(200,220,0,0.4);
+  border-radius:14px;box-shadow:var(--sh2);overflow:hidden;
+  padding:14px 16px 12px;position:relative;
+}
+.askmore-header{
+  display:flex;align-items:center;gap:7px;margin-bottom:12px;
+}
+.askmore-icon{
+  width:18px;height:18px;background:rgba(200,220,0,0.15);border-radius:5px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.askmore-icon svg{width:10px;height:10px;fill:var(--accent-text);}
+.askmore-title{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--accent-text);
+}
+.askmore-questions{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+.askmore-q{display:flex;flex-direction:column;gap:4px;}
+.askmore-q-label{font-size:12.5px;color:var(--text);line-height:1.4;}
+.askmore-q-input{
+  padding:7px 11px;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:8px;font-family:var(--sans);font-size:13px;color:var(--text);
+  outline:none;transition:border-color .15s,box-shadow .18s;
+}
+.askmore-q-input:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-ring);}
+.askmore-q-input::placeholder{color:var(--text3);}
+.askmore-footer{display:flex;gap:8px;align-items:center;}
+.askmore-send{
+  padding:7px 18px;background:var(--accent);border:none;border-radius:8px;
+  font-family:var(--sans);font-size:13px;font-weight:500;color:var(--accent-text);
+  cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(200,220,0,0.22);
+}
+.askmore-send:hover{background:var(--accent-dark);box-shadow:0 4px 12px rgba(200,220,0,0.30);}
+.askmore-skip{
+  padding:7px 14px;background:none;border:1px solid var(--border);border-radius:8px;
+  font-size:13px;color:var(--text3);cursor:pointer;transition:all .15s;
+}
+.askmore-skip:hover{border-color:var(--border2);color:var(--text2);}
+.askmore-close{
+  position:absolute;top:10px;right:12px;
+  background:none;border:none;cursor:pointer;color:var(--text3);
+  font-size:15px;line-height:1;padding:2px 5px;transition:color .15s;
+}
+.askmore-close:hover{color:var(--text2);}
+
+/* VEHICLE POPUP (Claude-style, appears directly above input bar) */
+.vehicle-bar{
+  flex-shrink:0;padding:8px 24px 0;
+  animation:slideUp .28s cubic-bezier(.16,1,.3,1);
+  position:relative;
+}
+.vehicle-inner{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;box-shadow:var(--sh2);
+  overflow:hidden;padding:20px 24px 16px;
+}
+.vehicle-title{
+  font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:14px;
+}
+
+/* input */
+.input-bar{background:var(--bg);border-top:1px solid var(--border);padding:14px 24px 18px;flex-shrink:0;}
+.input-inner{max-width:720px;margin:0 auto;display:flex;gap:9px;align-items:flex-end;}
+.input-wrap{
+  flex:1;background:var(--surface);border:1px solid var(--border);
+  border-radius:13px;display:flex;align-items:flex-end;padding:10px 13px;
+  transition:border-color .2s,box-shadow .2s;box-shadow:var(--sh1);
+}
+.input-wrap:focus-within{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-ring),var(--sh1);}
+textarea#inp{flex:1;background:transparent;border:none;outline:none;font-family:var(--sans);font-size:14px;color:var(--text);resize:none;max-height:110px;line-height:1.55;min-height:21px;}
+textarea#inp::placeholder{color:var(--text3);}
+.send-btn{
+  width:34px;height:34px;background:var(--accent);border:none;border-radius:8px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .18s cubic-bezier(.16,1,.3,1);flex-shrink:0;
+  box-shadow:0 2px 8px rgba(200,220,0,0.22);
+}
+.send-btn:hover:not(:disabled){background:var(--accent-dark);box-shadow:0 4px 14px rgba(200,220,0,0.30);transform:translateY(-1px);}
+.send-btn:disabled{opacity:.2;cursor:not-allowed;box-shadow:none;}
+.send-btn svg{width:12px;height:12px;fill:var(--text);}
+
+/* vehicle trigger button in input bar (Claude-style context button) */
+.vehicle-trigger{
+  background:var(--surface);border:1px solid var(--border);border-radius:13px;
+  padding:10px 16px;display:flex;align-items:center;gap:8px;
+  font-size:13.5px;color:var(--text2);cursor:pointer;transition:all .18s;
+  box-shadow:var(--sh1);white-space:nowrap;
+}
+.vehicle-trigger:hover{background:var(--surface3);border-color:var(--border2);color:var(--text);}
+.vehicle-trigger svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2.25;}
+
+/* vehicle bar — chip picker */
+.vpicker{display:flex;flex-direction:column;gap:10px;}
+.vpicker-step{display:flex;flex-direction:column;gap:6px;}
+.vpicker-step-label{
+  font-family:var(--mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--text3);
+}
+.vpicker-search{
+  width:100%;padding:7px 12px;
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;
+  font-family:var(--sans);font-size:13px;color:var(--text);outline:none;
+  transition:border-color .15s,box-shadow .18s;
+}
+.vpicker-search:focus{border-color:var(--border2);box-shadow:0 0 0 3px var(--accent-ring);}
+.vpicker-search::placeholder{color:var(--text3);}
+.vpicker-chips{
+  display:flex;flex-wrap:wrap;gap:5px;
+  max-height:110px;overflow-y:auto;padding:2px 0;
+}
+.vpicker-chips::-webkit-scrollbar{width:3px;}
+.vpicker-chips::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.vchip{
+  padding:4px 11px;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:20px;font-size:12.5px;color:var(--text2);cursor:pointer;
+  transition:all .14s;white-space:nowrap;
+}
+.vchip:hover{background:var(--surface3);border-color:var(--border2);color:var(--text);}
+.vchip.selected{
+  background:var(--accent);border-color:var(--accent-dark);color:var(--accent-text);font-weight:500;
+}
+.vchip.disabled{opacity:.3;pointer-events:none;}
+/* selected badge pill above chips */
+.vsel-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;background:rgba(200,220,0,0.12);border:1.5px solid rgba(200,220,0,0.4);
+  border-radius:20px;font-size:12px;color:var(--accent-text);margin-bottom:2px;cursor:pointer;
+}
+.vsel-badge:hover{background:rgba(200,220,0,0.2);}
+.vsel-badge .clear-x{font-size:13px;line-height:1;opacity:.6;}
+.vsearch{
+  width:100%;padding:9px 16px;
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;
+  font-family:var(--sans);font-size:13.5px;color:var(--text2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:all .15s;
+}
+.vsearch:hover:not(:disabled){background:var(--surface3);border-color:var(--border2);color:var(--text);}
+.vsearch.ready{background:var(--accent);border-color:var(--accent-dark);color:var(--text);font-weight:500;box-shadow:0 2px 8px rgba(200,220,0,0.22);}
+.vsearch.ready:hover{background:var(--accent-dark);box-shadow:0 4px 12px rgba(200,220,0,0.30);}
+.vsearch:disabled{opacity:.35;cursor:not-allowed;}
+.vsearch svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;}
+/* claude-style checkbox */
+.vc-row{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;width:fit-content;}
+.vc-box{
+  width:15px;height:15px;border:1.5px solid var(--border2);border-radius:4px;
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  transition:all .15s;flex-shrink:0;
+}
+.vc-box.on{background:var(--accent);border-color:var(--accent-dark);}
+.vc-box svg{display:none;width:9px;height:9px;stroke:var(--text);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.vc-box.on svg{display:block;}
+.vc-label{font-size:12.5px;color:var(--text2);}
+.vc-row:hover .vc-box{border-color:var(--border2);box-shadow:0 0 0 2px var(--accent-ring);}
+
+/* welcome */
+.welcome{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:48px 0 32px;animation:in .4s ease;}
+.welcome-mark{width:46px;height:46px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(200,220,0,0.28);}
+.welcome-mark svg{width:20px;height:20px;fill:var(--text);}
+.welcome-title{font-size:17px;font-weight:500;}
+.welcome-sub{font-size:13.5px;color:var(--text2);line-height:1.65;max-width:360px;}
+.input-hint{font-family:var(--mono);font-size:9.5px;color:var(--text3);text-align:center;margin-top:7px;letter-spacing:0.04em;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 16 16"><path d="M8 1L1 5v6l7 4 7-4V5L8 1zm0 2.2l4.5 2.6v4.4L8 12.8 3.5 10.2V5.8L8 3.2z"/></svg>
+    </div>
+    <div class="brand-name"><strong>Advanced ICE</strong>&nbsp; AI Assistant</div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-dot" id="statusDot"></div>
+    <input type="password" class="api-field" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" oninput="onKey()">
+  </div>
+</div>
+
+<div class="chat-scroll" id="chatScroll">
+  <div class="chat-feed" id="chatFeed">
+    <div class="welcome" id="welcome">
+      <div class="welcome-mark"><svg viewBox="0 0 16 16"><path d="M8 1L1 5v6l7 4 7-4V5L8 1zm0 2.2l4.5 2.6v4.4L8 12.8 3.5 10.2V5.8L8 3.2z"/></svg></div>
+      <div class="welcome-title">Advanced ICE AI Assistant</div>
+      <div class="welcome-sub">Ask me anything about head units, iDatalink Maestro, cameras, and audio upgrades for your vehicle.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Claude-style follow-up bar (unchanged) -->
+<div class="followup-bar" id="followupBar" style="display:none">
+  <div class="followup-inner-wrap">
+    <div class="followup-inner" id="followupInner"></div>
+    <button class="popover-close" onclick="closeFollowup()">×</button>
+  </div>
+</div>
+
+<!-- ASKMORE: Question checklist panel (Claude-style, above input bar) -->
+<div class="askmore-bar" id="askmoreBar" style="display:none">
+  <div class="followup-inner-wrap">
+    <div class="askmore-inner" id="askmoreInner">
+      <div class="askmore-header">
+        <div class="askmore-icon"><svg viewBox="0 0 12 12"><path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 3.5c.28 0 .5.22.5.5v2a.5.5 0 01-1 0V5c0-.28.22-.5.5-.5zm0 4.5a.6.6 0 110-1.2.6.6 0 010 1.2z"/></svg></div>
+        <span class="askmore-title">A few quick questions</span>
+      </div>
+      <div class="askmore-questions" id="askmoreQuestions"></div>
+      <div class="askmore-footer">
+        <button class="askmore-send" onclick="sendAskmore()">Send answers</button>
+        <button class="askmore-skip" onclick="closeAskmore()">Skip</button>
+      </div>
+    </div>
+    <button class="askmore-close" onclick="closeAskmore()">×</button>
+  </div>
+</div>
+
+<!-- NEW: Vehicle selection popup (Claude-style, triggered from input bar) -->
+<div class="vehicle-bar" id="vehicleBar" style="display:none">
+  <div class="followup-inner-wrap">
+    <div class="vehicle-inner">
+      <div class="vehicle-title">Select your vehicle</div>
+
+      <div class="vpicker">
+
+        <!-- MAKE -->
+        <div class="vpicker-step" id="stepMake">
+          <div class="vpicker-step-label">Make</div>
+          <div id="makeBadge" style="display:none"></div>
+          <input class="vpicker-search" id="makeSearch" placeholder="Search make…" oninput="filterChips('make')" autocomplete="off">
+          <div class="vpicker-chips" id="makeChips"></div>
+        </div>
+
+        <!-- YEAR -->
+        <div class="vpicker-step" id="stepYear" style="display:none">
+          <div class="vpicker-step-label">Year</div>
+          <div id="yearBadge" style="display:none"></div>
+          <input class="vpicker-search" id="yearSearch" placeholder="Search year…" oninput="filterChips('year')" autocomplete="off">
+          <div class="vpicker-chips" id="yearChips"></div>
+        </div>
+
+        <!-- MODEL -->
+        <div class="vpicker-step" id="stepModel" style="display:none">
+          <div class="vpicker-step-label">Model</div>
+          <div id="modelBadge" style="display:none"></div>
+          <input class="vpicker-search" id="modelSearch" placeholder="Search model…" oninput="filterChips('model')" autocomplete="off">
+          <div class="vpicker-chips" id="modelChips"></div>
+        </div>
+
+      </div>
+
+      <button class="vsearch" id="vSearch" onclick="searchVehicle()" style="margin-top:16px" disabled>
+        <svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
+        Search compatible solutions
+      </button>
+
+      <label class="vc-row" onclick="toggleCtx()" style="margin-top:16px;display:block">
+        <div class="vc-box" id="vcBox">
+          <svg viewBox="0 0 10 8"><polyline points="1,4 3.5,6.5 9,1"/></svg>
+        </div>
+        <span class="vc-label">Include vehicle context in every message sent to the LLM</span>
+      </label>
+    </div>
+    <button class="popover-close" onclick="hideVehiclePopup()">×</button>
+  </div>
+</div>
+
+<div class="input-bar">
+  <div class="input-inner">
+    <!-- Vehicle trigger button (right in the input bar, Claude-style) -->
+    <button class="vehicle-trigger" onclick="showVehiclePopup()" title="Add or change vehicle details (Make • Year • Model)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 9l-2 2H7l-2-2"/>
+        <path d="M5 9v8a2 2 0 002 2h10a2 2 0 002-2V9"/>
+        <circle cx="9" cy="19" r="2"/>
+        <circle cx="17" cy="19" r="2"/>
+      </svg>
+      Vehicle
+    </button>
+
+    <div class="input-wrap">
+      <textarea id="inp" rows="1" placeholder="Ask about your vehicle…"></textarea>
+    </div>
+    <button class="send-btn" id="sendBtn" disabled>
+      <svg viewBox="0 0 16 16"><path d="M2 14l12-6L2 2v5l8 1-8 1v5z"/></svg>
+    </button>
+  </div>
+  <div class="input-hint">Advanced ICE · advancedice.com.au · (07) 3137 2727 · Powered by Claude</div>
+</div>
+
+<script>
+// ── VEHICLE DATA ─────────────────────────────────────────────────────────────
+const MAKES=['Audi','BMW','BYD','Chevrolet','Ford','GMC','GWM','Holden','HSV','Hyundai','Isuzu','Jeep','Kia','Lexus','Mazda','Mercedes Benz','Mitsubishi','Nissan','Porsche','RAM','Skoda','Subaru','Toyota','Volkswagen'];
+const MODELS={Toyota:['Camry','Corolla','HiLux','LandCruiser 70','LandCruiser 200','LandCruiser 300','Prado','RAV4','Yaris','Kluger','Fortuner','HiAce','Tundra'],Ford:['Ranger','Everest','F-150','Escape','Focus','Mustang','Transit','Bronco','Explorer'],Mazda:['CX-5','CX-3','CX-8','CX-9','Mazda3','Mazda6','BT-50'],Hyundai:['Tucson','Santa Fe','i30','iLoad','Kona','Staria','Palisade'],Kia:['Sportage','Sorento','Carnival','Stinger','Cerato'],Nissan:['Navara','Patrol','X-Trail','Pathfinder','Qashqai','Armada'],Mitsubishi:['Triton','Pajero','Pajero Sport','ASX','Outlander','Eclipse Cross'],Volkswagen:['Golf','Tiguan','Amarok','Transporter','Touareg','Polo'],Isuzu:['D-MAX','MU-X'],Jeep:['Wrangler','Cherokee','Grand Cherokee','Compass','Gladiator'],Subaru:['Outback','Forester','Impreza','XV','WRX','Liberty'],Lexus:['LX','GX','RX','NX','IS','ES'],BMW:['3 Series','5 Series','X3','X5','X7','1 Series','M3'],Audi:['A3','A4','A6','Q3','Q5','Q7','RS3'],'Mercedes Benz':['C-Class','E-Class','GLC','GLE','Sprinter','Vito','A-Class'],Chevrolet:['Silverado','Colorado','Tahoe','Suburban'],GMC:['Sierra','Canyon','Yukon'],Holden:['Colorado','Commodore','Trailblazer'],Porsche:['Cayenne','Macan','Panamera','911'],RAM:['1500','2500','3500'],Skoda:['Octavia','Kodiaq','Karoq'],GWM:['Ute','Tank 300','Haval H6'],BYD:['Atto 3','Shark','Seal','Sealion 6','Dolphin'],HSV:['GTS','Senator','Maloo']};
+
+let vehicleCtx=false;
+let vPicked={make:'',year:'',model:''};
+
+// ── BUILD YEARS LIST ──────────────────────────────────────────────────────────
+const YEARS=(()=>{const a=[];const now=new Date().getFullYear();for(let y=now;y>=2006;y--)a.push(String(y));return a;})();
+
+// ── CHIP PICKER LOGIC ─────────────────────────────────────────────────────────
+function buildChips(containerId,items,type){
+  const el=document.getElementById(containerId);
+  el.innerHTML='';
+  items.forEach(item=>{
+    const b=document.createElement('button');
+    b.className='vchip'+(vPicked[type]===item?' selected':'');
+    b.textContent=item;
+    b.onclick=()=>pickChip(type,item);
+    el.appendChild(b);
+  });
+}
+
+function filterChips(type){
+  const searchId={make:'makeSearch',year:'yearSearch',model:'modelSearch'}[type];
+  const chipsId={make:'makeChips',year:'yearChips',model:'modelChips'}[type];
+  const q=document.getElementById(searchId).value.toLowerCase();
+  const all=type==='make'?MAKES:type==='year'?YEARS:(MODELS[vPicked.make]||[]);
+  const filtered=q?all.filter(i=>i.toLowerCase().includes(q)):all;
+  buildChips(chipsId,filtered,type);
+}
+
+function pickChip(type,value){
+  vPicked[type]=value;
+  // update badge + hide search/chips, show next step
+  showBadge(type,value);
+  // cascade
+  if(type==='make'){
+    // reset downstream
+    vPicked.year='';vPicked.model='';
+    clearBadge('year');clearBadge('model');
+    document.getElementById('stepYear').style.display='';
+    document.getElementById('stepModel').style.display='none';
+    document.getElementById('yearSearch').value='';
+    buildChips('yearChips',YEARS,'year');
+    // scroll to year step
+    document.getElementById('stepYear').scrollIntoView({behavior:'smooth',block:'nearest'});
+  } else if(type==='year'){
+    vPicked.model='';
+    clearBadge('model');
+    document.getElementById('stepModel').style.display='';
+    document.getElementById('modelSearch').value='';
+    buildChips('modelChips',MODELS[vPicked.make]||[],'model');
+    document.getElementById('stepModel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  updateSearchBtn();
+}
+
+function showBadge(type,value){
+  const badgeId={make:'makeBadge',year:'yearBadge',model:'modelBadge'}[type];
+  const searchId={make:'makeSearch',year:'yearSearch',model:'modelSearch'}[type];
+  const chipsId={make:'makeChips',year:'yearChips',model:'modelChips'}[type];
+  const badge=document.getElementById(badgeId);
+  badge.innerHTML=`<span class="vsel-badge" onclick="clearPick('${type}')"><span>${value}</span><span class="clear-x">×</span></span>`;
+  badge.style.display='';
+  document.getElementById(searchId).style.display='none';
+  document.getElementById(chipsId).style.display='none';
+}
+
+function clearBadge(type){
+  const badgeId={make:'makeBadge',year:'yearBadge',model:'modelBadge'}[type];
+  const searchId={make:'makeSearch',year:'yearSearch',model:'modelSearch'}[type];
+  const chipsId={make:'makeChips',year:'yearChips',model:'modelChips'}[type];
+  document.getElementById(badgeId).style.display='none';
+  document.getElementById(searchId).style.display='';
+  document.getElementById(chipsId).style.display='';
+}
+
+function clearPick(type){
+  vPicked[type]='';
+  clearBadge(type);
+  if(type==='make'){
+    vPicked.year='';vPicked.model='';
+    clearBadge('year');clearBadge('model');
+    document.getElementById('stepYear').style.display='none';
+    document.getElementById('stepModel').style.display='none';
+    document.getElementById('makeSearch').value='';
+    buildChips('makeChips',MAKES,'make');
+  } else if(type==='year'){
+    vPicked.model='';
+    clearBadge('model');
+    document.getElementById('stepModel').style.display='none';
+    document.getElementById('yearSearch').value='';
+    buildChips('yearChips',YEARS,'year');
+  } else if(type==='model'){
+    document.getElementById('modelSearch').value='';
+    buildChips('modelChips',MODELS[vPicked.make]||[],'model');
+  }
+  updateSearchBtn();
+}
+
+function updateSearchBtn(){
+  const btn=document.getElementById('vSearch');
+  const ready=vPicked.make&&vPicked.year&&vPicked.model;
+  btn.disabled=!ready;
+  btn.classList.toggle('ready',!!ready);
+}
+
+// init make chips on load
+(function(){buildChips('makeChips',MAKES,'make');})();
+
+function showVehiclePopup(){
+  document.getElementById('vehicleBar').style.display='';
+  updateSearchBtn();
+}
+function hideVehiclePopup(){
+  document.getElementById('vehicleBar').style.display='none';
+}
+
+function searchVehicle(){
+  const {make,year,model}=vPicked;
+  if(!make||!year||!model)return;
+  const q=`Full compatibility check for my ${year} ${make} ${model} — Maestro module, recommended head units, harness, and which factory features I can retain.`;
+  hideVehiclePopup();
+  inp.value=q;inp.dispatchEvent(new Event('input'));send();
+}
+
+function toggleCtx(){
+  vehicleCtx=!vehicleCtx;
+  document.getElementById('vcBox').classList.toggle('on',vehicleCtx);
+}
+
+function getVehiclePrefix(){
+  if(!vehicleCtx)return'';
+  const {make,year,model}=vPicked;
+  if(!make&&!year&&!model)return'';
+  return`[Vehicle: ${[year,make,model].filter(Boolean).join(' ')}] `;
+}
+
+const SYSTEM=`You are the Advanced ICE AI (advancedice.com.au) — Maestro, head units, cameras, audio installs.
+
+RULE: If the user has NOT provided their vehicle make, year, AND model — or if you are missing any detail needed to give a specific answer — you MUST ask before answering. Never guess or give generic advice when you lack their vehicle details.
+
+Reply in 2–4 short sentences max. No padding or bullet lists unless essential.
+
+At the very end of EVERY reply append these two tags on one line each:
+[askmore: Q1 | Q2 | Q3]   ← questions you need answered (leave blank list if none: [askmore:])
+[followups: Q1 | Q2 | Q3] ← suggested next questions for the user`;
+
+let history=[];
+let busy=false;
+
+const inp=document.getElementById('inp');
+const sendBtn=document.getElementById('sendBtn');
+
+// auto-resize textarea
+inp.addEventListener('input',()=>{
+  sendBtn.disabled=!inp.value.trim();
+  inp.style.height='auto';
+  inp.style.height=Math.min(inp.scrollHeight,110)+'px';
+});
+inp.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!sendBtn.disabled&&!busy)send();}
+});
+sendBtn.onclick=send;
+
+function onKey(){
+  const k=document.getElementById('apiKey').value.trim();
+  document.getElementById('statusDot').className='status-dot'+(k.startsWith('sk-')?' active':'');
+}
+
+// ── CORE CHAT LOGIC (unchanged except vehicle prefix) ───────────────────────
+async function send(){
+  const text=inp.value.trim();
+  if(!text||busy)return;
+  inp.value='';inp.style.height='auto';sendBtn.disabled=true;
+  closeFollowup();closeAskmore();
+  document.getElementById('welcome')?.remove();
+  const prefix=getVehiclePrefix();
+  const content=prefix+text;
+  appendUser(text);
+  history.push({role:'user',content});
+  if(history.length>4)history=history.slice(-4);
+
+  busy=true;showTyping();
+  const raw=await callAPI();
+  hideTyping();busy=false;
+
+  const {text:reply,followups,askmore}=parseResponse(raw);
+  history.push({role:'assistant',content:raw});
+  appendAI(reply);
+  if(askmore.length||followups.length)showFollowups(askmore,followups);
+  sendBtn.disabled=!inp.value.trim();
+}
+
+function parseResponse(raw){
+  const fMatch=raw.match(/\[followups:\s*([^\]]*)\]/i);
+  const aMatch=raw.match(/\[askmore:\s*([^\]]*)\]/i);
+  const text=raw.replace(/\[followups:[^\]]*\]/gi,'').replace(/\[askmore:[^\]]*\]/gi,'').trim();
+  const followups=fMatch?fMatch[1].split('|').map(s=>s.trim()).filter(Boolean):[];
+  const askmore=aMatch?aMatch[1].split('|').map(s=>s.trim()).filter(Boolean):[];
+  return{text,followups,askmore};
+}
+
+async function callAPI(){
+  const key=document.getElementById('apiKey').value.trim();
+  if(!key)return'Please enter your Anthropic API key in the top bar.';
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:350,system:SYSTEM,messages:history}),
+    });
+    const d=await res.json();
+    if(!res.ok)throw new Error(d.error?.message||'Error '+res.status);
+    return d.content?.[0]?.text||'No response.';
+  }catch(e){return`Error: ${e.message}`;}
+}
+
+function showFollowups(askmore,followups){
+  // askmore → dedicated question panel
+  if(askmore.length) showAskmorePanel(askmore);
+
+  // followups → chips bar
+  const inner=document.getElementById('followupInner');
+  inner.innerHTML='';
+  if(followups.length){
+    const sec=document.createElement('div');sec.className='popover-section';
+    sec.innerHTML=`<span class="popover-section-label">Ask</span><div class="popover-chips" id="followupChips"></div>`;
+    inner.appendChild(sec);
+    const row=sec.querySelector('#followupChips');
+    followups.forEach(q=>{
+      const b=document.createElement('button');b.className='fchip';b.textContent=q;
+      b.onclick=()=>{inp.value=q;inp.dispatchEvent(new Event('input'));closeFollowup();inp.focus();};
+      row.appendChild(b);
+    });
+    document.getElementById('followupBar').style.display='';
+  }
+}
+
+function closeFollowup(){document.getElementById('followupBar').style.display='none';}
+
+// ── ASKMORE PANEL ─────────────────────────────────────────────────────────────
+function showAskmorePanel(questions){
+  const container=document.getElementById('askmoreQuestions');
+  container.innerHTML='';
+  questions.forEach((q,i)=>{
+    const row=document.createElement('div');row.className='askmore-q';
+    row.innerHTML=`
+      <div class="askmore-q-label">${esc(q)}</div>
+      <input class="askmore-q-input" id="amInp${i}" placeholder="Your answer…" autocomplete="off">`;
+    container.appendChild(row);
+  });
+  document.getElementById('askmoreBar').style.display='';
+  // focus first input
+  setTimeout(()=>document.getElementById('amInp0')?.focus(),60);
+}
+
+function closeAskmore(){document.getElementById('askmoreBar').style.display='none';}
+
+function sendAskmore(){
+  const container=document.getElementById('askmoreQuestions');
+  const rows=container.querySelectorAll('.askmore-q');
+  const parts=[];
+  rows.forEach(row=>{
+    const label=row.querySelector('.askmore-q-label').textContent;
+    const val=row.querySelector('.askmore-q-input').value.trim();
+    if(val) parts.push(`${label}: ${val}`);
+  });
+  closeAskmore();
+  if(!parts.length)return;
+  inp.value=parts.join(' | ');
+  inp.dispatchEvent(new Event('input'));
+  send();
+}
+
+function appendAI(text){
+  const feed=document.getElementById('chatFeed');
+  const msg=document.createElement('div');msg.className='msg ai';
+  msg.innerHTML=`
+    <div class="msg-icon ai"><svg viewBox="0 0 16 16"><path d="M8 1L1 5v6l7 4 7-4V5L8 1zm0 2.2l4.5 2.6v4.4L8 12.8 3.5 10.2V5.8L8 3.2z"/></svg></div>
+    <div class="msg-body">
+      <div class="msg-sender">Advanced ICE AI</div>
+      <div class="msg-text">${renderMD(text)}</div>
+    </div>`;
+  feed.appendChild(msg);scroll();
+}
+
+function appendUser(text){
+  const feed=document.getElementById('chatFeed');
+  const msg=document.createElement('div');msg.className='msg user';
+  msg.innerHTML=`
+    <div class="msg-icon user"><svg viewBox="0 0 16 16"><path d="M8 8a3 3 0 100-6 3 3 0 000 6zm-5 6a5 5 0 0110 0H3z"/></svg></div>
+    <div class="msg-body">
+      <div class="msg-sender">You</div>
+      <div class="msg-text"><p>${esc(text)}</p></div>
+    </div>`;
+  feed.appendChild(msg);scroll();
+}
+
+function showTyping(){
+  const feed=document.getElementById('chatFeed');
+  const el=document.createElement('div');el.className='typing-row';el.id='typingRow';
+  el.innerHTML=`
+    <div class="msg-icon ai"><svg viewBox="0 0 16 16"><path d="M8 1L1 5v6l7 4 7-4V5L8 1zm0 2.2l4.5 2.6v4.4L8 12.8 3.5 10.2V5.8L8 3.2z"/></svg></div>
+    <div class="msg-body" style="display:flex;align-items:center;">
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+      <span class="typing-label">thinking</span>
+    </div>`;
+  feed.appendChild(el);scroll();
+}
+function hideTyping(){document.getElementById('typingRow')?.remove();}
+function scroll(){const s=document.getElementById('chatScroll');s.scrollTop=s.scrollHeight;}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function renderMD(t){
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^\|(.+)\|$/gm,line=>{
+      const cells=line.split('|').slice(1,-1).map(c=>c.trim());
+      if(cells.every(c=>/^[-:]+$/.test(c)))return'<!--d-->';
+      return'<tr>'+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>';
+    })
+    .replace(/((?:<tr>.*<\/tr>\n?|<!--d-->\n?)+)/g,block=>{
+      const rows=block.split('\n').filter(r=>r&&!r.includes('<!--d-->'));
+      if(!rows.length)return'';
+      const[h,...b]=rows;
+      const hc=h.replace(/<\/?t[rd]>/g,'').split('</td>').filter(Boolean).map(c=>`<th>${c.replace('<td>','')}</th>`).join('');
+      return`<table><thead><tr>${hc}</tr></thead><tbody>${b.join('')}</tbody></table>`;
+    })
+    .replace(/^[-*] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,m=>`<ul>${m}</ul>`)
+    .split('\n\n').map(p=>{
+      p=p.trim();if(!p)return'';
+      if(/^<(h3|ul|table)/.test(p))return p;
+      return`<p>${p.replace(/\n/g,'<br>')}</p>`;
+    }).join('\n');
+}
+</script>
+</body>
+</html>
