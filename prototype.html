@@ -314,8 +314,7 @@ textarea#inp::placeholder{color:var(--text3);}
     <div class="brand-name"><strong>Advanced ICE</strong>&nbsp; AI Assistant</div>
   </div>
   <div class="topbar-right">
-    <div class="status-dot" id="statusDot"></div>
-    <input type="password" class="api-field" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off" oninput="onKey()">
+    <div class="status-dot active" id="statusDot"></div>
   </div>
 </div>
 
@@ -595,10 +594,6 @@ inp.addEventListener('keydown',e=>{
 });
 sendBtn.onclick=send;
 
-function onKey(){
-  const k=document.getElementById('apiKey').value.trim();
-  document.getElementById('statusDot').className='status-dot'+(k.startsWith('sk-')?' active':'');
-}
 
 // ── CORE CHAT LOGIC (unchanged except vehicle prefix) ───────────────────────
 async function send(){
@@ -634,12 +629,10 @@ function parseResponse(raw){
 }
 
 async function callAPI(){
-  const key=document.getElementById('apiKey').value.trim();
-  if(!key)return'Please enter your Anthropic API key in the top bar.';
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/chat',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:350,system:SYSTEM,messages:history}),
     });
     const d=await res.json();
