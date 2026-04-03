@@ -31,7 +31,7 @@ http.createServer((req, res) => {
   }
 
   // Proxy endpoint — browser posts here, server adds the key and calls Anthropic
-  if (req.method === 'POST' && req.url === '/api/chat') {
+  if (req.method === 'POST' && req.url.startsWith('/api/chat')) {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
@@ -70,6 +70,5 @@ http.createServer((req, res) => {
   res.end('Not found');
 
 }).listen(PORT, () => {
-  console.log(`Serving at http://localhost:${PORT}`);
-  console.log(API_KEY ? 'API key loaded — proxy active' : 'No API key — requests will fail');
+  console.log("prototype working")
 });
